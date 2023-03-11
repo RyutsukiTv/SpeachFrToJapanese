@@ -5,7 +5,7 @@ from voicevox import Client
 import keyboard
 import speech_recognition as sr
 from googletrans import Translator
-
+import time
 translator = Translator()
 
 voice_chan = 3
@@ -14,13 +14,13 @@ voice_headphone = 6
 enterLanguage = "fr-FR"
 srcVoice = 'fr'
 voiceCharact = 20
-
+TIMEOUT = 10
 
 # fonction pour transcrire la voix en texte
 def speech_to_text(audio_file):
     r = sr.Recognizer()
     with sr.AudioFile(audio_file) as source:
-        audio = r.record(source, duration=10)
+        audio = r.record(source, duration=5)
     try:
         text = r.recognize_google(audio, language=enterLanguage)
         return text
@@ -35,7 +35,7 @@ def record_voice(device_id, filename):
     r = sr.Recognizer()
     with sr.Microphone(device_index=device_id) as source:
         print("Enregistrement en cours...")
-        audio = r.record(source, duration=5)
+        audio = r.record(source, duration=6)
         print("Enregistrement terminé.")
     with open(filename, "wb") as f:
         f.write(audio.get_wav_data())
@@ -76,21 +76,22 @@ def play_wav_on_outputs(wav_file, output_indices):
     stream2.close()
     p.terminate()
 
-# Traduction du texte en japonais
+
 def translate(text):
     translated = translator.translate(text, src=srcVoice, dest='ja')
     return translated.text
 
-# Ecriture du text dans un fichier txt pour recuperation sur OBS
+
 def write_to_file(file_path, content):
     with open(file_path, "w", encoding="utf-8") as file:
         file.write(content)
 
-
+last_v_pressed_time = time.time()
 async def main():
     print("Logiciel est lancé")
     while True:
         if keyboard.is_pressed('v'):
+            ast_v_pressed_time = time.time()
             record_voice(voice_chan, "audio.wav")
             txt1 = speech_to_text("audio.wav")
             txt2 = translate(txt1)
@@ -105,8 +106,7 @@ async def main():
                         print("voice generate")
                 write_to_file("text.txt", txt1)
                 play_wav_on_outputs('voice.wav', [voice_virtual, voice_headphone])
-
-
-
+        if time.time() - last_v_pressed_time > TIMEOUT:
+            write_to_file("text.txt", "")
 if __name__ == "__main__":
     asyncio.run(main())
